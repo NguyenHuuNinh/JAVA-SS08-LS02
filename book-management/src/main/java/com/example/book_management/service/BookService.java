@@ -1,7 +1,9 @@
 package com.example.book_management.service;
 
 import com.example.book_management.dto.BookCreateDTO;
+import com.example.book_management.dto.BookUpdateStockDTO;
 import com.example.book_management.entity.Book;
+import com.example.book_management.exception.ResourceNotFoundException;
 import com.example.book_management.repository.BookRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -20,9 +22,9 @@ public class BookService {
     @Autowired
     private BookRepository bookRepository;
 
-    // Đường dẫn theo đúng yêu cầu kết quả của bài tập
     private final String UPLOAD_DIR = "src/main/resources/uploads/";
 
+    // --- Tính năng bài 1: Thêm mới sách ---
     public Book createBook(BookCreateDTO dto) {
         String coverUrl = null;
 
@@ -32,14 +34,13 @@ public class BookService {
                 File dir = new File(UPLOAD_DIR);
                 if (!dir.exists()) dir.mkdirs();
 
-                String fileName = file.getOriginalFilename(); // Đặt tên nguyên bản theo ảnh mẫu
+                String fileName = file.getOriginalFilename();
                 Path filePath = Paths.get(UPLOAD_DIR + fileName);
                 Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
 
-                // Trả về đường dẫn giống hệt kết quả Postman
                 coverUrl = filePath.toString().replace("/", "\\");
             } catch (IOException e) {
-                throw new RuntimeException("Lỗi lưu file");
+                throw new RuntimeException("Lỗi lưu file ảnh");
             }
         }
 
@@ -50,5 +51,16 @@ public class BookService {
         book.setCoverUrl(coverUrl);
 
         return bookRepository.save(book);
+    }
+
+    // --- Tính năng bài 2: Cập nhật tồn kho (Stock) ---
+    public void updateBook(Long id, BookUpdateStockDTO dto) {
+        // Tìm sách theo ID. Nếu không thấy -> ném ResourceNotFoundException
+        Book book = bookRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Book with id " + id + " not found"));
+
+        // Nếu thấy -> set lại thông tin -> save()
+        book.setStock(dto.getStock());
+        bookRepository.save(book);
     }
 }
